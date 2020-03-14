@@ -26,7 +26,7 @@ function New-WeApp {
 
     $region = 'uksouth'
     $tag = 'windermere0521'
-    $token = '22f940c0b3964f2240f0276fe9172d8cd3c519ae'
+    $token = 'token'
 
     # Create github
     'Creating github repository...'
