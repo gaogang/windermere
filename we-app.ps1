@@ -26,6 +26,9 @@ function New-WeApp {
 
     $region = 'uksouth'
     $tag = 'windermere0521'
+
+    # Replace 'token' with your github personal access token
+    # Goto https://github.com/settings/tokens to generate a new PAT
     $token = 'token'
 
     # Create github
