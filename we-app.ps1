@@ -1,3 +1,12 @@
+# WeApp - 
+# 
+# WeApp is an open source Azure deployment tool aiming to provide a great developer experience in the cloud. It removes the complications in 
+# Azure, e.g. Network configurations so the app developers can focus on what really matters to them: the apps. 
+#
+# Author: Gang Gao (gaogang@gmail.com) 
+#
+# Licensed under Apache License 2.0
+
 function New-WeApp {
     <#
     .SYNOPSIS
@@ -8,6 +17,8 @@ function New-WeApp {
         The solution's runtime stack
     .PARAMETER user
         Github user
+    .EXAMPLE
+        New-WeApp -solutionName bronzefat999 -runtime node
     #>
 
     [CmdletBinding(SupportsShouldProcess)]
