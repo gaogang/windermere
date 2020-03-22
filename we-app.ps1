@@ -72,7 +72,7 @@ function New-WeApp {
         Write-Log -Message 'Resource group exists...' -Level Debug
     } else {
         "creating resource group..."
-        az group create --location $region --name $solutionName --tags $tag > $null
+        az group create --location $region --name $solutionName --subscription $subscription --tags $tag > $null
     }
 
     # Create an Azure storage account in the resource group.
@@ -102,10 +102,10 @@ function New-WeApp {
         }
 
         # Create service plan
-        az appservice plan create --name $servicePlanName --subscription $subscription --resource-group $solutionName --sku $sku --tags $tag
+        az appservice plan create --name $servicePlanName --subscription $subscription --resource-group $solutionName --sku $sku --tags $tag > $null
 
         # Create function
-        az functionapp create --name $functionAppName --subscription $subscription --storage-account $storageName --consumption-plan-location $region --resource-group $solutionName --runtime $runtime --functions-version 2 --plan $servicePlanName --tags $tag > $null
+        az functionapp create --name $functionAppName --subscription $subscription --storage-account $storageName --resource-group $solutionName --runtime $runtime --functions-version 2 --plan $servicePlanName --tags $tag > $null
     }
 
     # Sort out continuous integration
