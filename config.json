@@ -1,0 +1,14 @@
+{
+    "azure": {
+        "region": "Your region",
+        "subscription": "Your subscription",
+        "tag": {
+            "key": "windermere",
+            "value": ""
+        }
+    },
+    
+    "github": {
+        "token": "your github token"
+    }
+}

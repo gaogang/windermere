@@ -27,9 +27,6 @@ function Add-WeDb {
 
     # Check if the solution exists
     $resourceGroupExists = (az group exists --name $solutionName)
-    
-    $region = 'uksouth'
-    $tag = 'windermere0521'
 
     if ($resourceGroupExists -eq 'false') {
         $message = 'Resource group does not exists'
@@ -37,6 +34,9 @@ function Add-WeDb {
 
         throw $message
     } 
+
+    $region = 'uksouth'
+    $tag = 'windermere0521'
 
     # Create a VNet
     $vnetName = "$($solutionName)vnet"
