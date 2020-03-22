@@ -35,38 +35,42 @@ function Add-WeDb {
         throw $message
     } 
 
-    $region = 'uksouth'
+    # Load configuration
+    $config =(Get-Content 'config.json' | Out-String | ConvertFrom-Json)
+    $region = $config.azure.region
+    $subscription = $config.azure.subscription
     $tag = 'windermere0521'
 
     # Create a VNet
     $vnetName = "$($solutionName)vnet"
     $dbSubnetName = "$($solutionName)DbSubnet"
-    az network vnet create --name $vnetName --resource-group $solutionName --location $region --subnet-name $dbSubnetName --tag $tag
+    $vnet = (az network vnet create --name $vnetName --resource-group $solutionName --subscription $subscription --location $region --subnet-name $dbSubnetName --tag $tag)
 
     # Disable subnet private endpoint policies
-    az network vnet subnet update --name $dbSubnetName --resource-group $solutionName --vnet-name $vnetName --disable-private-endpoint-network-policies true
+    az network vnet subnet update --name $dbSubnetName --resource-group $solutionName --subscription $subscription --vnet-name $vnetName --disable-private-endpoint-network-policies true
     
     # Create cosmos db
     $cosmosDbAccount = "$($solutionName)cdb"
-    $cosmosDb = (az cosmosdb create --name $cosmosDbAccount --resource-group $solutionName --enable-virtual-network true --tag $tag)
+    $cosmosDb = (az cosmosdb create --name $cosmosDbAccount --resource-group $solutionName --subscription $subscription --enable-virtual-network true --tag $tag)
 
     # Create a private endpoint
     $privateEndpointName = "$($solutionName)pep"        # private endpoint
     $privateLinkName = "$($solutionName)pl"             # private link
 
     $cosmosDbJson = $cosmosDb | ConvertFrom-Json        # convert cosmosDb creation output to Json so we can extract the id of the cosmos db we just created
-    az network private-endpoint create --name $privateEndpointName --resource-group $solutionName --location $region --vnet-name $vnetName --subnet $dbSubnetName --private-connection-resource-id $cosmosDbJson.id --connection-name $privateLinkName --group-id Sql --tags $tag
+    az network private-endpoint create --name $privateEndpointName --resource-group $solutionName --subscription $subscription --location $region --vnet-name $vnetName --subnet $dbSubnetName --private-connection-resource-id $cosmosDbJson.id --connection-name $privateLinkName --group-id Sql --tags $tag
 
     # create a service endpoint to the app so the app can get access to the database
     $appSubnetName = "$($solutionName)AppSubnet"
 
     # Work out subnet ip
+    $vnetJson = $vnet | ConvertFrom-Json 
     $subnetIpAddr = $vnetJson.newVNET.subnets[0].addressPrefix.split(".")
-    $appSubnetIpAddr =  "$($subnetIpAddr[0]).$($subnetIpAddr[1]).$(($subnetIpAddr[2] -as [int]) + 1).$($subnetIpAddr[3])" 
+    $appSubnetIpAddr = "$($subnetIpAddr[0]).$($subnetIpAddr[1]).$(($subnetIpAddr[2] -as [int]) + 1).$($subnetIpAddr[3])" 
 
-    az network vnet subnet create --name $appSubnetName --vnet-name $vnetName --resource-group $solution --address-prefixes $appSubnetIpAddr
+    az network vnet subnet create --name $appSubnetName --vnet-name $vnetName --subscription $subscription --resource-group $solutionName --address-prefixes $appSubnetIpAddr
     
-    az webapp vnet-integration add  --name "$($solutionName)app" --resource-group $solutionName --vnet $vnetName --subnet $appSubnetName
+    az webapp vnet-integration add  --name "$($solutionName)app" --subscription $subscription --resource-group $solutionName --vnet $vnetName --subnet $appSubnetName
 
     'Database added successfully'
 }
