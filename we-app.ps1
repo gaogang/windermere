@@ -15,6 +15,10 @@ function New-WeApp {
         Name of the solution to be created.
     .PARAMETER runtime
         The solution's runtime stack
+    .PARAMETER size
+        Size of server allocated to the solution { small, medium, big, dontcare - auto scale, pay as you go and any value native to Azure }
+    .PARAMETER repo
+        Type of repository (Accepted values - none, github)
     .PARAMETER user
         Github user
     .EXAMPLE
@@ -32,6 +36,12 @@ function New-WeApp {
         [string]$runtime = 'node',
 
         [ValidateNotNullOrEmpty()]
+        [String]$size = 'dontcare',
+
+        [ValidateNotNullOrEmpty()]
+        [String]$repo = 'none',
+
+        [ValidateNotNullOrEmpty()]
         [string]$user = 'gaogang'
     )
 
@@ -43,15 +53,23 @@ function New-WeApp {
     $token = 'token'
 
     # Create github
-    'Creating github repository...'
-    New-GitHubRepository -RepositoryName $solutionName -AccessToken $token -AutoInit > $null
+    if ($repo -eq 'github') {
+        'Creating github repository...'
+        New-GitHubRepository -RepositoryName $solutionName -AccessToken $token -AutoInit > $null
+    }
 
     # Enable authenticated git deployment in your subscription from a private repo
     'Setting up deployment credentials...'
     az functionapp deployment source update-token --git-token $token > $null
 
-    "creating resource group..."
-    az group create --location $region --name $solutionName --tags $tag > $null
+    $groupExists = (az group exists --name $solutionName)
+
+    if ($groupExists -eq 'true') {
+        Write-Log -Message 'Resource group exists...' -Level Debug
+    } else {
+        "creating resource group..."
+        az group create --location $region --name $solutionName --tags $tag > $null
+    }
 
     # Create an Azure storage account in the resource group.
     'Creating storage account...'
@@ -63,12 +81,37 @@ function New-WeApp {
     'Creating a simple public facing serverless app'
     $functionAppName = "$($solutionName)app"
 
-    az functionapp create --name $functionAppName --storage-account $storageName --consumption-plan-location $region --resource-group $solutionName --runtime $Runtime --functions-version 2 --tags $tag > $null
+    
+    if ($size -eq 'dontcare') {
+        # Create function with Consumption plan
+        az functionapp create --name $functionAppName --storage-account $storageName --resource-group $solutionName --runtime $runtime --functions-version 2 --tags $tag > $null
+    } else {
+        $servicePlanName = "$($solutionName)plan"
+        $sku = $size
+
+        if ($size -eq 'small') {
+            $sku = 'S1'
+        } elseif ($size -eq 'medium') {
+            $sku = 'P1V2'
+        } elseif ($size -eq 'large') {
+            $sku = 'p3V2'
+        }
+
+        # Create service plan
+        az appservice plan create --name $servicePlanName --resource-group $solutionName --sku $sku --tags $tag
+
+        # Create function
+        az functionapp create --name $functionAppName --storage-account $storageName --consumption-plan-location $region --resource-group $solutionName --runtime $runtime --functions-version 2 --plan $servicePlanName --tags $tag > $null
+    }
 
     # Sort out continuous integration
-    "Setting up github integration -  $($functionAppName) -> https://github.com/$($user)/$($solutionName)"
-    az functionapp deployment source config --branch master --name $functionAppName --repo-url "https://github.com/$($user)/$($solutionName)" --resource-group $solutionName > $null
-
+    if ($repo -eq 'github') {
+        "Setting up github integration -  $($functionAppName) -> https://github.com/$($user)/$($solutionName)"
+        az functionapp deployment source config --branch master --name $functionAppName --repo-url "https://github.com/$($user)/$($solutionName)" --resource-group $solutionName > $null
+    }
+    
     "Solution $($solutionName) created successfully"
 }
+
+
 
