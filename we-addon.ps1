@@ -41,7 +41,7 @@ function Add-WeDb {
     # Create a VNet
     $vnetName = "$($solutionName)vnet"
     $dbSubnetName = "$($solutionName)DbSubnet"
-    $vnet = (az network vnet create --name $vnetName --resource-group $solutionName --location $region --subnet-name $dbSubnetName --tag $tag)
+    az network vnet create --name $vnetName --resource-group $solutionName --location $region --subnet-name $dbSubnetName --tag $tag
 
     # Disable subnet private endpoint policies
     az network vnet subnet update --name $dbSubnetName --resource-group $solutionName --vnet-name $vnetName --disable-private-endpoint-network-policies true
@@ -62,7 +62,7 @@ function Add-WeDb {
 
     # Work out subnet ip
     $subnetIpAddr = $vnetJson.newVNET.subnets[0].addressPrefix.split(".")
-    $appSubnetIpAddr =  "$($subnetIpArr[0]).$($subnetIpArr[1]).$(($subnetIpArr[2] -as [int]) + 1).$($subnetIpArr[3])" 
+    $appSubnetIpAddr =  "$($subnetIpAddr[0]).$($subnetIpAddr[1]).$(($subnetIpAddr[2] -as [int]) + 1).$($subnetIpAddr[3])" 
 
     az network vnet subnet create --name $appSubnetName --vnet-name $vnetName --resource-group $solution --address-prefixes $appSubnetIpAddr
     
