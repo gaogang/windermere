@@ -1,7 +1,7 @@
 {
     "azure": {
-        "region": "Your region",
-        "subscription": "Your subscription",
+        "region": "uksouth",
+        "subscription": "Pay-As-You-Go",
         "tag": {
             "key": "windermere",
             "value": ""
@@ -9,6 +9,6 @@
     },
     
     "github": {
-        "token": "your github token"
+        "token": "token"
     }
 }
