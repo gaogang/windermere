@@ -7,7 +7,7 @@
 #
 # Licensed under Apache License 2.0
 
-function New-WeApp {
+function New-WeApi {
     <#
     .SYNOPSIS
         Creates a new simple public facing serverless App in Azure
