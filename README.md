@@ -15,7 +15,7 @@ New-WeApp   -solutionName
 ```
 ![Create an classic app](https://github.com/gaogang/windermere/blob/master/Docs/Images/we-classic-app.png)
 
-This command Creates a classic web app in Azure with two deployment slots - development and production, and a repository in GitHub linked to the development slot.
+Create a classic web app in Azure with two deployment slots - development and production, and a repository in GitHub linked to the development slot.
 
 #### Example
 
