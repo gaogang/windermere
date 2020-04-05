@@ -1,15 +1,26 @@
-# Windermere
+# Project Windermere
 
 ## What is Windermere 
 Windermere is a collection of scripts aiming to bring Azure closer to DevOps engineers. 
 
-## Dependencies
+## Use cases
 
-The scripts in Windermere were written in Powershell. The table below lists the modules the scripts depend on:
+### Create a new app
 
-| #  | Module | description |
-| -- | ------------- | ------------- |
-| | az  | Azure CLI
-| | PowershellForGitHub  | Powershell wrapper for GitHub Apis | 
+![Create an classic app](https://github.com/gaogang/windermere/Docs/Images/we-classic-app.png)
 
-## How to use
+```powershell
+New-WeApp   -solutionName
+            -runtime
+            [ -size ]
+            [ -repo ]
+```
+
+#### Example
+
+```powershell
+New-WeApp -solutionName bronzefat999 -runtime '"node|10.15"' -size small
+```
+
+The code above creates a web app with two deployment slots - development and production, and a repository in GitHub linked to the development slot.
+

@@ -20,7 +20,7 @@ function New-WeApp {
     .PARAMETER repo
         Type of repository (Accepted values - none, github)
     .EXAMPLE
-        New-WeApp -solutionName bronzefat999 -runtime node
+        New-WeApp -solutionName bronzefat999 -runtime '"node|10.15"' -size small
     #>
 
     [CmdletBinding(SupportsShouldProcess)]
@@ -37,7 +37,7 @@ function New-WeApp {
         [String]$size = 'small',
 
         [ValidateNotNullOrEmpty()]
-        [String]$repo = 'none'
+        [String]$repo = 'github'
     )
 
     # Load configuration
