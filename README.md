@@ -3,11 +3,9 @@
 ## What is Windermere 
 Windermere is a collection of scripts aiming to bring Azure closer to DevOps engineers. 
 
-## Use cases
+## App
 
 ### Create a new app
-
-![Create an classic app](https://github.com/gaogang/windermere/Docs/Images/we-classic-app.png)
 
 ```powershell
 New-WeApp   -solutionName
@@ -15,6 +13,9 @@ New-WeApp   -solutionName
             [ -size ]
             [ -repo ]
 ```
+![Create an classic app](https://github.com/gaogang/windermere/blob/master/Docs/Images/we-classic-app.png)
+
+This command Creates a classic web app in Azure with two deployment slots - development and production, and a repository in GitHub linked to the development slot.
 
 #### Example
 
@@ -22,5 +23,5 @@ New-WeApp   -solutionName
 New-WeApp -solutionName bronzefat999 -runtime '"node|10.15"' -size small
 ```
 
-The code above creates a web app with two deployment slots - development and production, and a repository in GitHub linked to the development slot.
-
+#### References
+[Set up staging environments in Azure App Service](https://docs.microsoft.com/en-us/azure/app-service/deploy-staging-slots)
