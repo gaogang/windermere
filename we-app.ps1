@@ -7,7 +7,7 @@
 #
 # Licensed under Apache License 2.0
 
-function New-WeApi {
+function New-WeApp {
     <#
     .SYNOPSIS
         Creates a new simple public facing serverless App in Azure
@@ -16,11 +16,9 @@ function New-WeApi {
     .PARAMETER runtime
         The solution's runtime stack
     .PARAMETER size
-        Size of server allocated to the solution { small, medium, big, dontcare - auto scale, pay as you go and any value native to Azure }
+        Size of server allocated to the solution { small, medium, large }
     .PARAMETER repo
         Type of repository (Accepted values - none, github)
-    .PARAMETER user
-        Github user
     .EXAMPLE
         New-WeApp -solutionName bronzefat999 -runtime node
     #>
@@ -33,16 +31,13 @@ function New-WeApi {
         [string]$solutionName,
 
         [ValidateNotNullOrEmpty()]
-        [string]$runtime = 'node',
+        [string]$runtime = '"node|10.15"',
 
         [ValidateNotNullOrEmpty()]
-        [String]$size = 'dontcare',
+        [String]$size = 'small',
 
         [ValidateNotNullOrEmpty()]
-        [String]$repo = 'none',
-
-        [ValidateNotNullOrEmpty()]
-        [string]$user = 'gaogang'
+        [String]$repo = 'none'
     )
 
     # Load configuration
@@ -50,71 +45,67 @@ function New-WeApi {
 
     $subscription = $config.azure.subscription
     $region = $config.azure.region
-    $tag = 'windermere0521'
+    $tag = "$($config.azure.tag.key)=$($config.azure.tag.value)"
 
-    # Replace 'token' with your github personal access token
-    # Goto https://github.com/settings/tokens to generate a new PAT
     $token = $config.github.token
 
     # Create github
     if ($repo -eq 'github') {
-        'Creating github repository...'
+        Write-Debug 'Creating github repository...'
         New-GitHubRepository -RepositoryName $solutionName -AccessToken $token -AutoInit > $null
     }
-
-    # Enable authenticated git deployment in your subscription from a private repo
-    'Setting up deployment credentials...'
-    az functionapp deployment source update-token --git-token $token --subscription $subscription > $null
 
     $groupExists = (az group exists --name $solutionName --subscription $subscription)
 
     if ($groupExists -eq 'true') {
-        Write-Log -Message 'Resource group exists...' -Level Debug
+        Write-Debug 'Resource group exists...'
     } else {
-        "creating resource group..."
+        Write-Debug 'creating resource group...'
         az group create --location $region --name $solutionName --subscription $subscription --tags $tag > $null
     }
 
-    # Create an Azure storage account in the resource group.
-    'Creating storage account...'
-    $storageName = "$($solutionName)storage"
-
-    az storage account create --name $storageName --subscription $subscription --location $region --resource-group $solutionName --sku Standard_LRS --tags $tag > $null
-
     # Create an simple public facing serverless app
-    'Creating a simple public facing serverless app'
-    $functionAppName = "$($solutionName)app"
+    Write-Debug 'Creating a simple public facing web app'
+    $appName = "$($solutionName)app"
 
     
-    if ($size -eq 'dontcare') {
-        # Create function with Consumption plan
-        az functionapp create --name $functionAppName --subscription $subscription --storage-account $storageName --resource-group $solutionName --runtime $runtime --functions-version 2 --tags $tag > $null
+    $servicePlanName = "$($solutionName)plan"
+    $sku = $size
+
+    if ($size -eq 'small') {
+        $sku = 'P1V2'
+    } elseif ($size -eq 'medium') {
+        $sku = 'P2V2'
+    } elseif ($size -eq 'large') {
+       $sku = 'P3V2'
     } else {
-        $servicePlanName = "$($solutionName)plan"
-        $sku = $size
-
-        if ($size -eq 'small') {
-            $sku = 'S1'
-        } elseif ($size -eq 'medium') {
-            $sku = 'P1V2'
-        } elseif ($size -eq 'large') {
-            $sku = 'P3V2'
-        }
-
-        # Create service plan
-        az appservice plan create --name $servicePlanName --subscription $subscription --resource-group $solutionName --sku $sku --tags $tag > $null
-
-        # Create function
-        az functionapp create --name $functionAppName --subscription $subscription --storage-account $storageName --resource-group $solutionName --runtime $runtime --functions-version 2 --plan $servicePlanName --tags $tag > $null
+        Write-Error "Unsupported app size - $($size)"
     }
+
+    # Create service plan
+    az appservice plan create --name $servicePlanName --subscription $subscription --resource-group $solutionName --sku $sku --tags $tag > $null
+
+    # Create web app
+    az webapp create --name $appName --subscription $subscription --resource-group $solutionName --runtime $runtime --plan $servicePlanName --tags $tag > $null
 
     # Sort out continuous integration
     if ($repo -eq 'github') {
-        "Setting up github integration -  $($functionAppName) -> https://github.com/$($user)/$($solutionName)"
-        az functionapp deployment source config --branch master --name $functionAppName --subscription $subscription --repo-url "https://github.com/$($user)/$($solutionName)" --resource-group $solutionName > $null
+        $user = $config.github.user
+        $repoUrl = "https://github.com/$($user)/$($solutionName)"
+        $slotName = 'development'
+
+        Write-Debug "Create deployment slot - $($slotName)"
+        az webapp deployment slot create --name $appName --subscription $subscription --resource-group $solutionName --slot $slotName > $null
+
+        # Enable authenticated git deployment in your subscription from a private repo
+        Write-Debug 'Setting up deployment credentials...'
+        az webapp deployment source update-token --git-token $token --subscription $subscription > $null
+
+        Write-Debug "Setting up github integration -  $($appName) -> $($repoUrl)"
+        az webapp deployment source config --branch master --name $appName --subscription $subscription --repo-url $repoUrl --resource-group $solutionName --slot $slotName > $null
     }
     
-    "Solution $($solutionName) created successfully"
+    Write-Debug "Solution $($solutionName) created successfully"
 }
 
 

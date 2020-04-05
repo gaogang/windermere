@@ -1,14 +1,15 @@
 {
     "azure": {
-        "region": "uksouth",
-        "subscription": "Pay-As-You-Go",
+        "region": "your region",
+        "subscription": "your subscription id",
         "tag": {
             "key": "windermere",
-            "value": ""
+            "value": "05212010"
         }
     },
     
     "github": {
-        "token": "token"
+        "user": "my github username",
+        "token": "my github personal access token"
     }
 }
