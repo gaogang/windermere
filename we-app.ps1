@@ -37,8 +37,12 @@ function New-WeApp {
         [String]$size = 'small',
 
         [ValidateNotNullOrEmpty()]
-        [String]$repo = 'github'
+        [String]$repo = 'github',
+
+        [string]$repoUrl = ''
     )
+
+    $DebugPreference = "Continue"
 
     # Load configuration
     $config =(Get-Content 'config.json' | Out-String | ConvertFrom-Json)
@@ -46,15 +50,7 @@ function New-WeApp {
     $subscription = $config.azure.subscription
     $region = $config.azure.region
     $tag = "$($config.azure.tag.key)=$($config.azure.tag.value)"
-
     $token = $config.github.token
-
-    # Create github
-    if ($repo -eq 'github') {
-        Write-Debug 'Creating github repository...'
-        New-GitHubRepository -RepositoryName $solutionName -AccessToken $token -AutoInit > $null
-    }
-
     $groupExists = (az group exists --name $solutionName --subscription $subscription)
 
     if ($groupExists -eq 'true') {
@@ -65,15 +61,13 @@ function New-WeApp {
     }
 
     # Create an simple public facing serverless app
-    Write-Debug 'Creating a simple public facing web app'
     $appName = "$($solutionName)app"
-
     
     $servicePlanName = "$($solutionName)plan"
     $sku = $size
 
     if ($size -eq 'small') {
-        $sku = 'P1V2'
+        $sku = 'S1'
     } elseif ($size -eq 'medium') {
         $sku = 'P2V2'
     } elseif ($size -eq 'large') {
@@ -83,15 +77,23 @@ function New-WeApp {
     }
 
     # Create service plan
-    az appservice plan create --name $servicePlanName --subscription $subscription --resource-group $solutionName --sku $sku --tags $tag > $null
+    Write-Debug "Creating service plan..."
+    az appservice plan create --name $servicePlanName --subscription $subscription --resource-group $solutionName --location $region --sku $sku --tags $tag > $null
 
     # Create web app
+    Write-Debug 'Creating web app...'
     az webapp create --name $appName --subscription $subscription --resource-group $solutionName --runtime $runtime --plan $servicePlanName --tags $tag > $null
 
     # Sort out continuous integration
     if ($repo -eq 'github') {
-        $user = $config.github.user
-        $repoUrl = "https://github.com/$($user)/$($solutionName)"
+        if ($repoUrl -eq '') {
+            $repoUrl = "$($config.github.urlBase)/$($solutionName)"
+            
+            # Create new repo
+            Write-Debug "Creating new repository in GitHub..."
+            New-GitHubRepository -RepositoryName $solutionName -AccessToken $token -AutoInit > $null
+        }
+        
         $slotName = 'development'
 
         Write-Debug "Create deployment slot - $($slotName)"
