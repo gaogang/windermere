@@ -3,6 +3,16 @@
 ## What is Windermere 
 Windermere is a collection of scripts aiming to bring Azure closer to DevOps engineers. 
 
+## Getting Started
+
+### Prerequisites
+
+1. PowershellForGithub
+
+``` powershell
+Install-Module -Name PowerShellForGitHub
+```
+
 ## App
 
 ### Create a new app
