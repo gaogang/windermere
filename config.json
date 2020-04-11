@@ -1,7 +1,7 @@
 {
     "azure": {
-        "region": "your region",
-        "subscription": "your subscription id",
+        "region": "<your azure region>",
+        "subscription": "<your azure subscription id",
         "tag": {
             "key": "windermere",
             "value": "05212010"
@@ -9,7 +9,7 @@
     },
     
     "github": {
-        "user": "my github username",
-        "token": "my github personal access token"
+        "urlBase": "https://github.com/<your github username>",
+        "token": "<your github personal access token"
     }
 }

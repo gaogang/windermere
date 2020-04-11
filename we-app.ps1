@@ -15,12 +15,16 @@ function New-WeApp {
         Name of the solution to be created.
     .PARAMETER runtime
         The solution's runtime stack
+    .PARAMETER build
+        build { react, none }
     .PARAMETER size
         Size of server allocated to the solution { small, medium, large }
     .PARAMETER repo
         Type of repository (Accepted values - none, github)
+    .PARAMETER repoUrl
+        Url of an existing repository 
     .EXAMPLE
-        New-WeApp -solutionName bronzefat999 -runtime '"node|10.15"' -size small
+        New-WeApp -solutionName bronzefat999 -runtime '"react"' -size small
     #>
 
     [CmdletBinding(SupportsShouldProcess)]
@@ -31,7 +35,10 @@ function New-WeApp {
         [string]$solutionName,
 
         [ValidateNotNullOrEmpty()]
-        [string]$runtime = '"node|10.15"',
+        [string]$runtime = 'node|10.15',
+
+        [ValidateNotNullOrEmpty()]
+        [string]$build = 'node',
 
         [ValidateNotNullOrEmpty()]
         [String]$size = 'small',
@@ -41,8 +48,6 @@ function New-WeApp {
 
         [string]$repoUrl = ''
     )
-
-    $DebugPreference = "Continue"
 
     # Load configuration
     $config =(Get-Content 'config.json' | Out-String | ConvertFrom-Json)
@@ -54,9 +59,9 @@ function New-WeApp {
     $groupExists = (az group exists --name $solutionName --subscription $subscription)
 
     if ($groupExists -eq 'true') {
-        Write-Debug 'Resource group exists...'
+        Write-Host 'Resource group exists...' -BackgroundColor "Green" -ForegroundColor "Black"
     } else {
-        Write-Debug 'creating resource group...'
+        Write-output 'creating resource group...'
         az group create --location $region --name $solutionName --subscription $subscription --tags $tag > $null
     }
 
@@ -77,12 +82,12 @@ function New-WeApp {
     }
 
     # Create service plan
-    Write-Debug "Creating service plan..."
+    Write-output "Creating service plan..."
     az appservice plan create --name $servicePlanName --subscription $subscription --resource-group $solutionName --location $region --sku $sku --tags $tag > $null
 
     # Create web app
-    Write-Debug 'Creating web app...'
-    az webapp create --name $appName --subscription $subscription --resource-group $solutionName --runtime $runtime --plan $servicePlanName --tags $tag > $null
+    Write-output "Creating web app - name: $($appName) runtime: $($runtime) template $($template)..."
+    az webapp create --name $appName --subscription $subscription --resource-group $solutionName --runtime "`"$($runtime)`""  --plan $servicePlanName --tags $tag > $null
 
     # Sort out continuous integration
     if ($repo -eq 'github') {
@@ -90,13 +95,30 @@ function New-WeApp {
             $repoUrl = "$($config.github.urlBase)/$($solutionName)"
             
             # Create new repo
-            Write-Debug "Creating new repository in GitHub..."
-            New-GitHubRepository -RepositoryName $solutionName -AccessToken $token -AutoInit > $null
+            Write-output "Creating new repository in GitHub..."
+            $reactTemplateUrl = 'https://github.com/bronze-xueyuan/node-template'
+            switch($runtime.Substring(0, 4)) {
+                'node' 
+                {
+                    if ($build -eq 'react') {
+                        Write-output "Loading react template..."
+                        $reactTemplateUrl = 'https://github.com/bronze-xueyuan/react-template'
+                    } 
+
+                    Write-Host "Fokring repo from $($reactTemplateUrl)..." -BackgroundColor "Blue" -ForegroundColor "Black"
+                    New-GitHubRepositoryFork -Uri $reactTemplateUrl -NoStatus -AccessToken $token | Foreach-Object {$_ | Rename-GitHubRepository -NewName $solutionName -AccessToken $token -Confirm:$false} > $null
+                }
+                default
+                {
+                    Write-Host "Create a new repo..." -BackgroundColor "Green" -ForegroundColor "Black"
+                    New-GitHubRepository -RepositoryName $solutionName -AccessToken $token -AutoInit > $null
+                }
+            }
         }
         
         $slotName = 'development'
 
-        Write-Debug "Create deployment slot - $($slotName)"
+        Write-output "Creating deployment slot - $($slotName)"
         az webapp deployment slot create --name $appName --subscription $subscription --resource-group $solutionName --slot $slotName > $null
 
         # Enable authenticated git deployment in your subscription from a private repo
@@ -105,9 +127,11 @@ function New-WeApp {
 
         Write-Debug "Setting up github integration -  $($appName) -> $($repoUrl)"
         az webapp deployment source config --branch master --name $appName --subscription $subscription --repo-url $repoUrl --resource-group $solutionName --slot $slotName > $null
+    } else {
+        Write-error "repo type $($repo) is not supported"
     }
     
-    Write-Debug "Solution $($solutionName) created successfully"
+    Write-Host "Solution $($solutionName) created successfully" -BackgroundColor "Green" -ForegroundColor "Black"
 }
 
 
