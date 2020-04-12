@@ -14,18 +14,27 @@ Install-Module -Name PowerShellForGitHub
 ```
 
 ### Examples 
-### Create a new React App
+
+### Create a new app
+
+#### Create a react app
 
 ```powershell
 New-WeApp -solutionName bronzefat999 -runtime 'node|10.15' -build react -size small
 ```
 
-![Create an classic app](https://github.com/gaogang/windermere/blob/master/Docs/Images/we-classic-app.png)
+#### Create a express app
+
+```powershell
+New-WeApp -solutionName bronzefat999 -runtime 'node|10.15' -build express -size small
+```
 
 #### behind the scene 
 
+![Create an classic app](https://github.com/gaogang/windermere/blob/master/Docs/Images/we-classic-app.png)
+
 The script creates:
- 1. A skeleton react app 
+ 1. A skeleton app (react, express, etc) 
  2. A Github repository
  3. An App Service Plan
  4. An Azure App Service with two deployment slots - **development** and **production** and
