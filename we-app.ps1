@@ -10,7 +10,7 @@
 function New-WeApp {
     <#
     .SYNOPSIS
-        Creates a new simple public facing serverless App in Azure
+        Creates a new App in Azure App Service
     .PARAMETER projectName
         Name of the project to be created.
     .PARAMETER appName
@@ -18,7 +18,9 @@ function New-WeApp {
     .PARAMETER runtime
         The solution's runtime stack
     .PARAMETER build
-        build { accepted values - none, react}
+        build { accepted values - none, react, express }
+    .PARAMETER internal
+        By default the app created will be internet facing. Specify this to create an internal app. 
     .PARAMETER size
         Size of server allocated to the solution { accepted values - small, medium, large }
     .PARAMETER repo
@@ -74,7 +76,7 @@ function New-WeApp {
         $appId = Get-Random -minimum 10000 -maximum 99999
         $appName = "$($projectName)app$($appId)"
     } else {
-        $searchResults = az webapp list --subscription $subscription --resource-group bronzefat98 --query "[?name=='$($appName)']" | ConvertFrom-Json
+        $searchResults = az webapp list --subscription $subscription --resource-group $projectName --query "[?name=='$($appName)']" | ConvertFrom-Json
 
         # Return error is appName is not unique 
         if ($searchResults.length -gt 0) {
@@ -83,7 +85,6 @@ function New-WeApp {
         }
     }
     
-
     $servicePlanName = "$($appName)plan"
     $sku = ''
 
@@ -112,17 +113,21 @@ function New-WeApp {
             
             # Create new repo
             Write-output "Creating new repository in GitHub..."
-            $reactTemplateUrl = 'https://github.com/bronze-xueyuan/node-template'
+            $templateUrl = 'https://github.com/bronze-xueyuan/node-template'
             switch($runtime.Substring(0, 4)) {
                 'node' 
                 {
                     if ($build -eq 'react') {
                         Write-output "Loading react template..."
-                        $reactTemplateUrl = 'https://github.com/bronze-xueyuan/react-template'
+                        $templateUrl = 'https://github.com/bronze-xueyuan/react-template'
                     } 
+                    elseif ($build -eq 'express') {
+                        Write-output "Loading node express template..."
+                        $templateUrl = 'https://github.com/bronze-xueyuan/node-express-template'
+                    }
 
-                    Write-Host "Fokring repo from $($reactTemplateUrl)..." -BackgroundColor "Blue" -ForegroundColor "Black"
-                    New-GitHubRepositoryFork -Uri $reactTemplateUrl -NoStatus -AccessToken $token | Foreach-Object {$_ | Rename-GitHubRepository -NewName $appName -AccessToken $token -Confirm:$false} > $null
+                    Write-Host "Fokring repo from $($templateUrl)..." -BackgroundColor "Blue" -ForegroundColor "Black"
+                    New-GitHubRepositoryFork -Uri $templateUrl -NoStatus -AccessToken $token | Foreach-Object {$_ | Rename-GitHubRepository -NewName $appName -AccessToken $token -Confirm:$false} > $null
                 }
                 default
                 {
@@ -149,5 +154,4 @@ function New-WeApp {
     
     Write-Host "Application $($appName) created successfully" -BackgroundColor "Green" -ForegroundColor "Black"
 }
-
 
