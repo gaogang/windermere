@@ -22,7 +22,7 @@ function New-WeApp {
     .PARAMETER internal
         By default the app created will be internet facing. Specify this to create an internal app. 
     .PARAMETER size
-        Size of server allocated to the solution { accepted values - small, medium, large }
+        Size of server allocated to the solution { accepted values - free, small, medium, large }
     .PARAMETER repo
         Type of repository {accepted values - none, github}
     .PARAMETER repoUrl
@@ -46,6 +46,8 @@ function New-WeApp {
         [ValidateNotNullOrEmpty()]
         [string]$build = 'none',
 
+        [switch]$internal,
+
         [ValidateNotNullOrEmpty()]
         [String]$size = 'small',
 
@@ -54,6 +56,11 @@ function New-WeApp {
 
         [string]$repoUrl = ''
     )
+
+    if ($size -eq 'free' -AND $internal.IsPresent) {
+        Write-Error "App in free tier cannot be internal. Process stops"
+        return;
+    }
 
     # Load configuration
     $config =(Get-Content 'config.json' | Out-String | ConvertFrom-Json)
@@ -88,7 +95,10 @@ function New-WeApp {
     $servicePlanName = "$($appName)plan"
     $sku = ''
 
-    if ($size -eq 'small') {
+    if($size -eq 'free') {
+        $sku = 'F1'
+    }
+    elseif ($size -eq 'small') {
         $sku = 'S1'
     } elseif ($size -eq 'medium') {
         $sku = 'P2V2'
@@ -103,7 +113,7 @@ function New-WeApp {
     az appservice plan create --name $servicePlanName --subscription $subscription --resource-group $projectName --location $region --sku $sku --tags $tag > $null
 
     # Create web app
-    Write-output "Creating web app - name: $($appName) runtime: $($runtime) build $($build)..."
+    Write-output "Creating web app - name: $($appName) size: $($size) runtime: $($runtime) build $($build)..."
     az webapp create --name $appName --subscription $subscription --resource-group $projectName --runtime "`"$($runtime)`""  --plan $servicePlanName --tags $tag > $null
 
     # Sort out continuous integration
@@ -137,17 +147,23 @@ function New-WeApp {
             }
         }
         
-        $slotName = 'development'
-
-        Write-output "Creating deployment slot - $($slotName)"
-        az webapp deployment slot create --name $appName --subscription $subscription --resource-group $projectName --slot $slotName > $null
-
         # Enable authenticated git deployment in your subscription from a private repo
         Write-Debug 'Setting up deployment credentials...'
         az webapp deployment source update-token --git-token $token --subscription $subscription > $null
 
-        Write-Debug "Setting up github integration -  $($appName) -> $($repoUrl)"
-        az webapp deployment source config --branch master --name $appName --subscription $subscription --repo-url $repoUrl --resource-group $projectName --slot $slotName > $null
+        if ($size -eq 'free') {
+            Write-Debug "Setting up github integration -  $($appName) -> $($repoUrl)"
+            az webapp deployment source config --branch master --name $appName --subscription $subscription --repo-url $repoUrl --resource-group $projectName > $null
+
+        } else {
+            $slotName = 'development'
+
+            Write-output "Creating deployment slot - $($slotName)"
+            az webapp deployment slot create --name $appName --subscription $subscription --resource-group $projectName --slot $slotName > $null
+
+            Write-Debug "Setting up github integration -  $($appName) -> $($repoUrl)"
+            az webapp deployment source config --branch master --name $appName --subscription $subscription --repo-url $repoUrl --resource-group $projectName --slot $slotName > $null
+        }
     } else {
         Write-error "repo type $($repo) is not supported"
     }
